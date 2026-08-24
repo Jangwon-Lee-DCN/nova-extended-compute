@@ -33,6 +33,7 @@ from nova.conf import cyborg
 from nova.conf import database
 from nova.conf import devices
 from nova.conf import ephemeral_storage
+from nova.conf import flyt
 from nova.conf import glance
 from nova.conf import guestfs
 from nova.conf import imagecache
@@ -82,6 +83,7 @@ database.register_opts(CONF)
 devices.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
 glance.register_opts(CONF)
+flyt.register_opts(CONF)
 guestfs.register_opts(CONF)
 manila.register_opts(CONF)
 mks.register_opts(CONF)
