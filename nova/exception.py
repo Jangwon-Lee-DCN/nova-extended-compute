@@ -393,7 +393,10 @@ class InvalidKeypair(Invalid):
 
 
 class InvalidRequest(Invalid):
-    msg_fmt = _("The request is invalid.")
+    # Preserve the caller-supplied reason. This is required for fail-closed
+    # service integrations such as FLYT; otherwise operators and users receive
+    # an unactionable generic 400 while the request is safely rejected.
+    msg_fmt = _("The request is invalid: %(reason)s")
 
 
 class InvalidInput(Invalid):
