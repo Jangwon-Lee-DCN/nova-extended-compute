@@ -57,6 +57,7 @@ from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova import exception
 from nova import exception_wrapper
+from nova import flyt as flyt_integration
 from nova.i18n import _
 from nova.image import glance
 from nova.limit import local as local_limit
@@ -1408,7 +1409,7 @@ class API:
         instance_group, check_server_group_quota, filter_properties,
         key_pair, tags, trusted_certs, supports_multiattach,
         network_metadata=None, requested_host=None,
-        requested_hypervisor_hostname=None,
+        requested_hypervisor_hostname=None, instance_uuids=None,
     ):
         # NOTE(boxiang): Check whether compute nodes exist by validating
         # the host and/or the hypervisor_hostname. Pass the destination
@@ -1474,7 +1475,9 @@ class API:
             for idx in range(num_instances):
                 # Create a uuid for the instance so we can store the
                 # RequestSpec before the instance is created.
-                instance_uuid = uuidutils.generate_uuid()
+                instance_uuid = (
+                    instance_uuids[idx] if instance_uuids
+                    else uuidutils.generate_uuid())
                 # Store the RequestSpec that will be used for scheduling.
                 req_spec = objects.RequestSpec.from_components(
                     context,
@@ -1743,6 +1746,24 @@ class API:
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
+        flyt_instance_uuids = None
+        if flyt_integration.enabled(flavor):
+            if min_count != 1 or max_count != 1:
+                raise exception.InvalidRequest(
+                    reason="FLYT Flavor does not support multi-create")
+            instance_uuid = uuidutils.generate_uuid()
+            port_id = flyt_integration.prebuild(
+                context, instance_uuid, flavor, boot_meta, availability_zone)
+            flyt_instance_uuids = [instance_uuid]
+            if requested_networks is None:
+                requested_networks = objects.NetworkRequestList(objects=[])
+            if requested_networks.no_allocate:
+                flyt_integration.rollback(instance_uuid)
+                raise exception.InvalidRequest(
+                    reason="FLYT Flavor requires network allocation")
+            requested_networks.objects.append(
+                objects.NetworkRequest(port_id=port_id))
+
         (
             base_options, max_net_count, key_pair, security_groups,
             network_metadata,
@@ -1806,7 +1827,8 @@ class API:
             shutdown_terminate, instance_group, check_server_group_quota,
             filter_properties, key_pair, tags, trusted_certs,
             supports_multiattach, network_metadata,
-            requested_host, requested_hypervisor_hostname)
+            requested_host, requested_hypervisor_hostname,
+            instance_uuids=flyt_instance_uuids)
 
         instances = []
         request_specs = []
