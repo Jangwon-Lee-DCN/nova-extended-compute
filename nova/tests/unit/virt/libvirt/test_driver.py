@@ -22417,6 +22417,35 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
 
+    def test_get_guest_storage_config_assigns_opt_in_disk_iothread(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        flavor = objects.Flavor(
+            name='storage-parallel', memory_mb=2048, vcpus=2,
+            root_gb=20, ephemeral_gb=0, swap=0,
+            extra_specs={'hw:disk_iothread': 'true'})
+        disk = vconfig.LibvirtConfigGuestDisk()
+        disk.source_device = 'disk'
+        cdrom = vconfig.LibvirtConfigGuestDisk()
+        cdrom.source_device = 'cdrom'
+        controller = vconfig.LibvirtConfigGuestController()
+
+        drvr._set_disk_iothread((disk, cdrom, controller), flavor)
+
+        self.assertEqual(1, disk.driver_iothread)
+        self.assertIsNone(cdrom.driver_iothread)
+
+    def test_get_guest_storage_config_preserves_default_disk_iothread(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        flavor = objects.Flavor(
+            name='default', memory_mb=2048, vcpus=2, root_gb=20,
+            ephemeral_gb=0, swap=0, extra_specs={})
+        disk = vconfig.LibvirtConfigGuestDisk()
+        disk.source_device = 'disk'
+
+        drvr._set_disk_iothread((disk,), flavor)
+
+        self.assertIsNone(disk.driver_iothread)
+
     def test_get_neutron_events(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         network_info = [network_model.VIF(id='1'),

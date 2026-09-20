@@ -1200,6 +1200,19 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.target_dev, '/dev/hdc')
         self.assertEqual(obj.target_bus, 'ide')
 
+    def test_config_block_iothread_round_trip(self):
+        xml = """<disk type="block" device="disk">
+                   <driver name="qemu" type="raw" cache="none"
+                           io="native" iothread="1"/>
+                   <source dev="/dev/dm-1"/>
+                   <target bus="virtio" dev="vda"/>
+                 </disk>"""
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_str(xml)
+
+        self.assertEqual(1, obj.driver_iothread)
+        self.assertXmlEqual(xml, obj.to_xml())
+
     def test_config_network(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "network"

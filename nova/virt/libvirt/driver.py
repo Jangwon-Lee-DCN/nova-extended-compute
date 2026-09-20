@@ -6163,7 +6163,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance, 'disk.rescue', disk_mapping, flavor, boot_order='1')
             devices.append(diskrescue)
 
+        self._set_disk_iothread(devices, flavor)
         return devices
+
+    @staticmethod
+    def _set_disk_iothread(devices, flavor):
+        enabled = strutils.bool_from_string(
+            flavor['extra_specs'].get('hw:disk_iothread', 'false'))
+        if not enabled:
+            return
+
+        for device in devices:
+            if (isinstance(device, vconfig.LibvirtConfigGuestDisk) and
+                    device.source_device == 'disk'):
+                device.driver_iothread = 1
 
     @staticmethod
     def _get_scsi_controller(image_meta):
