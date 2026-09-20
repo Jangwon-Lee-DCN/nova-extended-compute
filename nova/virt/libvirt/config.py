@@ -1185,6 +1185,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_cache = None
         self.driver_discard = None
         self.driver_io = None
+        self.driver_iothread = None
         self.driver_iommu = False
         self.source_path = None
         self.source_protocol = None
@@ -1292,7 +1293,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         dev.set("type", self.source_type)
         dev.set("device", self.source_device)
         if any((self.driver_name, self.driver_format, self.driver_cache,
-                self.driver_discard, self.driver_iommu)):
+                self.driver_discard, self.driver_io, self.driver_iothread,
+                self.driver_iommu)):
             drv = etree.Element("driver")
             if self.driver_name is not None:
                 drv.set("name", self.driver_name)
@@ -1304,6 +1306,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 drv.set("discard", self.driver_discard)
             if self.driver_io is not None:
                 drv.set("io", self.driver_io)
+            if self.driver_iothread is not None:
+                drv.set("iothread", str(self.driver_iothread))
             if self.driver_iommu:
                 drv.set("iommu", "on")
             dev.append(drv)
@@ -1406,6 +1410,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.driver_cache = c.get('cache')
                 self.driver_discard = c.get('discard')
                 self.driver_io = c.get('io')
+                driver_iothread = c.get('iothread')
+                self.driver_iothread = (
+                    int(driver_iothread) if driver_iothread else None)
                 self.driver_iommu = c.get('iommu', '') == "on"
             elif c.tag == 'source':
                 if self.source_type == 'file':

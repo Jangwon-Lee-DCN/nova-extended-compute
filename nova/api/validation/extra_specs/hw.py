@@ -396,6 +396,18 @@ feature_flag_validators = [
         },
     ),
     base.ExtraSpecValidator(
+        name='hw:disk_iothread',
+        description=(
+            'Whether to assign guest disk devices to a dedicated QEMU '
+            'IOThread. This can improve parallel block I/O latency and is '
+            'only supported by the libvirt driver.'
+        ),
+        value={
+            'type': bool,
+            'description': 'Whether to assign disks to a QEMU IOThread',
+        },
+    ),
+    base.ExtraSpecValidator(
         name='hw:mem_encryption',
         description=(
             'Whether to enable memory encryption for the guest. '
