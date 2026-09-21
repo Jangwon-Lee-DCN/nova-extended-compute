@@ -2370,6 +2370,11 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_info['unit'] = self._get_scsi_controller_next_unit(guest)
 
         conf = self._get_volume_config(instance, connection_info, disk_info)
+        # Spawn-time disks pass through _get_guest_storage_config(), but a
+        # volume attached to an existing guest does not.  Apply the same
+        # flavor opt-in here so data volumes do not silently fall back to the
+        # QEMU main loop while the boot disk uses the declared IOThread.
+        self._set_disk_iothread((conf,), instance.flavor)
 
         self._check_discard_for_attach_volume(conf, instance)
 
@@ -2492,6 +2497,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._connect_volume(context, new_connection_info, instance)
         conf = self._get_volume_config(
             instance, new_connection_info, disk_info)
+        # Keep the opt-in disk policy when the backing volume is replaced.
+        self._set_disk_iothread((conf,), instance.flavor)
 
         try:
             self._swap_volume(guest, disk_dev, conf, resize_to)

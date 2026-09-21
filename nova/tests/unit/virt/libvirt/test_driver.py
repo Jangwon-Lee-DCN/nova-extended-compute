@@ -11120,6 +11120,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_domain, mock_get_info, get_image):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        instance.flavor.extra_specs = {'hw:disk_iothread': 'true'}
         image_meta = {}
         get_image.return_value = image_meta
         mock_dom = mock.MagicMock()
@@ -11134,7 +11135,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info = {'bus': bdm['disk_bus'], 'type': bdm['device_type'],
                      'dev': 'vdb'}
         mock_get_info.return_value = disk_info
-        mock_conf = mock.MagicMock()
+        mock_conf = vconfig.LibvirtConfigGuestDisk()
+        mock_conf.source_device = 'disk'
+        mock_conf.source_path = '/fake'
+        mock_conf.target_bus = 'virtio'
+        mock_conf.target_dev = 'vdb'
         flags = (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                  fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
 
@@ -11166,6 +11171,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     self.context, connection_info, instance, encryption=None)
                 mock_get_volume_config.assert_called_with(
                     instance, connection_info, disk_info)
+                self.assertEqual(1, mock_conf.driver_iothread)
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags=flags)
                 mock_check_discard.assert_called_with(mock_conf, instance)
@@ -22878,6 +22884,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          swap_volume, disconnect_volume):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
+        instance.flavor.extra_specs = {'hw:disk_iothread': 'true'}
         old_connection_info = {'driver_volume_type': 'fake',
                                'serial': 'old-volume-id',
                                'data': {'device_path': '/fake-old-volume',
@@ -22900,7 +22907,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_dom.name.return_value = 'inst'
         mock_dom.UUIDString.return_value = 'uuid'
         get_guest.return_value = guest
-        conf = mock.MagicMock(source_path='/fake-new-volume')
+        conf = vconfig.LibvirtConfigGuestDisk()
+        conf.source_device = 'disk'
+        conf.source_path = '/fake-new-volume'
         get_volume_config.return_value = conf
 
         conn.swap_volume(self.context, old_connection_info,
@@ -22911,6 +22920,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                new_connection_info, instance)
 
         swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
+        self.assertEqual(1, conf.driver_iothread)
         disconnect_volume.assert_called_once_with(self.context,
                                                   old_connection_info,
                                                   instance)
