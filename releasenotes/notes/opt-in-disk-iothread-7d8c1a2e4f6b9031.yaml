@@ -3,5 +3,6 @@ features:
   - |
     Adds the ``hw:disk_iothread`` flavor extra spec for the libvirt driver.
     When enabled, QEMU disk devices are assigned to the instance's dedicated
-    IOThread. The default is disabled, so existing flavors and instance disk
-    XML remain unchanged.
+    IOThread during initial spawn, later volume attachment, and volume swap.
+    The default is disabled, so existing flavors and instance disk XML remain
+    unchanged.
